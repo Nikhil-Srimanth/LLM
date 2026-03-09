@@ -1,7 +1,8 @@
-streamlit 
+groq 
 speechrecognition 
 pyttsx3 
-nltk 
-spacy
-groq
+pyaudio 
+wikipedia 
+pywhatkit
+streamlit
 python-dotenv
