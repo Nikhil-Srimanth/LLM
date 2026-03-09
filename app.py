@@ -5,30 +5,39 @@ import wikipedia
 from groq import Groq
 from dotenv import load_dotenv
 
-# Load .env variables
+# Load .env (for local running)
 load_dotenv()
 
-# Get API key
+# Get API key (works locally + Streamlit Cloud)
 api_key = os.getenv("GROQ_API_KEY")
 
-# Initialize Groq client
+if not api_key:
+    try:
+        api_key = st.secrets["GROQ_API_KEY"]
+    except:
+        st.error("API key not found. Add GROQ_API_KEY to .env or Streamlit secrets.")
+        st.stop()
+
+# Initialize Groq
 client = Groq(api_key=api_key)
 
+# Streamlit UI setup
 st.set_page_config(page_title="Jarvis AI", page_icon="🤖")
 
 st.title("🤖 Jarvis AI Assistant")
 st.write("Your personal AI assistant powered by Groq")
 
-# Conversation memory
+# Chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display old messages
+# Show old messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
 
+# LLM function
 def ask_llm(prompt):
 
     response = client.chat.completions.create(
@@ -42,6 +51,7 @@ def ask_llm(prompt):
     return response.choices[0].message.content
 
 
+# Command system
 def handle_commands(prompt):
 
     prompt = prompt.lower()
@@ -59,6 +69,7 @@ def handle_commands(prompt):
     return None
 
 
+# Chat input
 prompt = st.chat_input("Ask Jarvis something...")
 
 if prompt:
@@ -81,16 +92,21 @@ if prompt:
         st.write(response)
 
 
-st.sidebar.title("⚡ Tools")
+# Sidebar tools
+st.sidebar.title("⚡ Jarvis Tools")
 
 if st.sidebar.button("Clear Chat"):
     st.session_state.messages = []
     st.rerun()
 
 
-topic = st.sidebar.text_input("Wikipedia Search")
+# Wikipedia quick search
+st.sidebar.subheader("Wikipedia Search")
+
+topic = st.sidebar.text_input("Enter topic")
 
 if st.sidebar.button("Search") and topic:
+
     try:
         result = wikipedia.summary(topic, sentences=3)
         st.sidebar.write(result)
