@@ -1,134 +1,93 @@
 import streamlit as st
 import os
-import datetime
-import wikipedia
 from groq import Groq
 from dotenv import load_dotenv
 
-# Load .env for local environment
+# Load environment variables
 load_dotenv()
 
-# Get API key (works locally + Streamlit Cloud)
 api_key = os.getenv("GROQ_API_KEY")
 
 if not api_key:
     try:
         api_key = st.secrets["GROQ_API_KEY"]
     except:
-        st.error("❌ GROQ API key not found. Add it to .env or Streamlit secrets.")
+        st.error("API key not found")
         st.stop()
 
-# Initialize Groq client
 client = Groq(api_key=api_key)
 
-# Streamlit UI setup
-st.set_page_config(page_title="Jarvis AI", page_icon="🤖")
+# Page config
+st.set_page_config(
+    page_title="Jarvis AI",
+    page_icon="🤖",
+    layout="wide"
+)
 
-st.title("🤖 Jarvis AI Assistant")
-st.write("Your personal AI assistant powered by Groq")
+# Sidebar
+st.sidebar.title("💬 ChatGPT Style Jarvis")
 
-# Chat memory
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display previous messages
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
+if st.sidebar.button("➕ New Chat"):
+    st.session_state.messages = []
+    st.rerun()
+
+st.sidebar.write("Powered by Groq")
+
+# Main title
+st.title("🤖 Jarvis AI Assistant")
+
+# Display chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
 
-# Function to ask Groq
-def ask_llm(prompt):
-
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are Jarvis, a helpful AI assistant."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.7,
-            max_tokens=500
-        )
-
-        return response.choices[0].message.content
-
-    except Exception as e:
-        return f"⚠️ AI Error: {str(e)}"
-
-
-# Command handler
-def handle_commands(prompt):
-
-    prompt = prompt.lower()
-
-    if "time" in prompt:
-        return f"The current time is {datetime.datetime.now().strftime('%H:%M')}"
-
-    if "wikipedia" in prompt:
-        topic = prompt.replace("wikipedia", "")
-
-        try:
-            return wikipedia.summary(topic, sentences=2)
-        except:
-            return "Sorry, I couldn't find anything on Wikipedia."
-
-    return None
-
-
-# Chat input
-prompt = st.chat_input("Ask Jarvis something...")
+# User input
+prompt = st.chat_input("Send a message...")
 
 if prompt:
 
-    # Save user message
+    # Store user message
     st.session_state.messages.append(
         {"role": "user", "content": prompt}
     )
 
     with st.chat_message("user"):
-        st.write(prompt)
+        st.markdown(prompt)
 
-    # Check commands
-    command_response = handle_commands(prompt)
+    # Assistant response container
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
 
-    if command_response:
-        response = command_response
-    else:
-        response = ask_llm(prompt)
+        full_response = ""
 
-    # Save AI response
+        try:
+            completion = client.chat.completions.create(
+                model="llama-3.1-70b-versatile",
+                messages=st.session_state.messages,
+                temperature=0.7,
+                max_tokens=1024,
+                stream=True
+            )
+
+            # Streaming response
+            for chunk in completion:
+
+                if chunk.choices[0].delta.content:
+                    full_response += chunk.choices[0].delta.content
+                    message_placeholder.markdown(full_response + "▌")
+
+            message_placeholder.markdown(full_response)
+
+        except Exception as e:
+            full_response = f"Error: {str(e)}"
+            message_placeholder.markdown(full_response)
+
+    # Save assistant message
     st.session_state.messages.append(
-        {"role": "assistant", "content": response}
+        {"role": "assistant", "content": full_response}
     )
 
-    with st.chat_message("assistant"):
-        st.write(response)
-
-
-# Sidebar tools
-st.sidebar.title("⚡ Jarvis Tools")
-
-# Clear chat
-if st.sidebar.button("Clear Chat"):
-    st.session_state.messages = []
-    st.rerun()
-
-# Wikipedia quick search
-st.sidebar.subheader("Wikipedia Search")
-
-topic = st.sidebar.text_input("Enter topic")
-
-if st.sidebar.button("Search") and topic:
-
-    try:
-        result = wikipedia.summary(topic, sentences=3)
-        st.sidebar.write(result)
-    except:
-        st.sidebar.write("No results found")
