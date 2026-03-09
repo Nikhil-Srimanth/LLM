@@ -1,8 +1,7 @@
+streamlit 
 groq 
 speechrecognition 
 pyttsx3 
-pyaudio 
+python-dotenv 
 wikipedia 
 pywhatkit
-streamlit
-python-dotenv
