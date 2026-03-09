@@ -1,108 +1,134 @@
+```python
 import streamlit as st
-import speech_recognition as sr
-import pyttsx3
 import datetime
-import webbrowser
 import wikipedia
-import pywhatkit
-import os
+import webbrowser
+import requests
 from groq import Groq
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 # Initialize Groq client
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# Text to speech engine
-engine = pyttsx3.init()
-engine.setProperty("rate", 170)
+st.set_page_config(page_title="Jarvis AI", page_icon="🤖", layout="wide")
 
-def speak(text):
-    engine.say(text)
-    engine.runAndWait()
+st.title("🤖 Jarvis AI Assistant")
+st.write("Your personal AI assistant powered by Groq")
 
-def listen():
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.info("Listening...")
-        audio = recognizer.listen(source)
+# Conversation memory
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-    try:
-        command = recognizer.recognize_google(audio)
-        return command.lower()
-    except:
-        return ""
+# Display previous messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 
+
+# Function to query LLM
 def ask_llm(prompt):
+
     response = client.chat.completions.create(
         model="llama3-8b-8192",
         messages=[
-            {"role": "system", "content": "You are Jarvis, an intelligent AI assistant."},
+            {"role": "system", "content": "You are Jarvis, an intelligent helpful AI assistant."},
             {"role": "user", "content": prompt}
         ]
     )
 
     return response.choices[0].message.content
 
-# Streamlit UI
-st.set_page_config(page_title="Jarvis AI", page_icon="🤖")
 
-st.title("🤖 Jarvis AI Assistant")
-st.write("Your personal AI assistant powered by Groq")
+# Command handler
+def handle_commands(prompt):
 
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+    prompt = prompt.lower()
 
-# Text input
-user_input = st.text_input("Ask Jarvis something")
+    # Time
+    if "time" in prompt:
+        return f"The current time is {datetime.datetime.now().strftime('%H:%M')}"
 
-col1, col2 = st.columns(2)
+    # Wikipedia search
+    if "wikipedia" in prompt:
+        topic = prompt.replace("wikipedia", "")
+        try:
+            return wikipedia.summary(topic, sentences=2)
+        except:
+            return "Sorry, I couldn't find anything."
 
-with col1:
-    if st.button("Send"):
-        if user_input:
-            response = ask_llm(user_input)
+    # Open websites
+    if "open youtube" in prompt:
+        webbrowser.open("https://youtube.com")
+        return "Opening YouTube"
 
-            st.session_state.chat_history.append(("You", user_input))
-            st.session_state.chat_history.append(("Jarvis", response))
+    if "open google" in prompt:
+        webbrowser.open("https://google.com")
+        return "Opening Google"
 
-            speak(response)
+    return None
 
-with col2:
-    if st.button("🎤 Voice Command"):
-        command = listen()
 
-        if command != "":
-            response = ask_llm(command)
+# Chat input
+prompt = st.chat_input("Ask Jarvis something...")
 
-            st.session_state.chat_history.append(("You", command))
-            st.session_state.chat_history.append(("Jarvis", response))
+if prompt:
 
-            speak(response)
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-# Display chat
-for role, message in st.session_state.chat_history:
-    if role == "You":
-        st.markdown(f"**🧑 You:** {message}")
+    with st.chat_message("user"):
+        st.write(prompt)
+
+    # Check commands
+    command_response = handle_commands(prompt)
+
+    if command_response:
+        response = command_response
     else:
-        st.markdown(f"**🤖 Jarvis:** {message}")
+        response = ask_llm(prompt)
 
-# Quick commands
-st.subheader("⚡ Quick Commands")
+    st.session_state.messages.append({"role": "assistant", "content": response})
 
-if st.button("Current Time"):
-    time = datetime.datetime.now().strftime("%H:%M")
-    st.write(f"Current time: {time}")
-    speak(f"The time is {time}")
+    with st.chat_message("assistant"):
+        st.write(response)
 
-if st.button("Open YouTube"):
-    webbrowser.open("https://youtube.com")
-    st.write("Opening YouTube")
 
-if st.button("Search Wikipedia"):
-    topic = st.text_input("Enter topic")
-    if topic:
-        result = wikipedia.summary(topic, sentences=2)
-        st.write(result)
+# Sidebar tools
+st.sidebar.title("⚡ Jarvis Tools")
+
+if st.sidebar.button("Clear Chat"):
+    st.session_state.messages = []
+    st.rerun()
+
+# Wikipedia quick search
+st.sidebar.subheader("Wikipedia Search")
+
+topic = st.sidebar.text_input("Enter topic")
+
+if st.sidebar.button("Search Wikipedia") and topic:
+    try:
+        result = wikipedia.summary(topic, sentences=3)
+        st.sidebar.write(result)
+    except:
+        st.sidebar.write("No results found")
+
+# File reader
+st.sidebar.subheader("AI File Reader")
+
+file = st.sidebar.file_uploader("Upload text file")
+
+if file:
+
+    text = file.read().decode("utf-8")
+
+    response = client.chat.completions.create(
+        model="llama3-8b-8192",
+        messages=[
+            {"role": "system", "content": "Summarize this document"},
+            {"role": "user", "content": text}
+        ]
+    )
+
+    summary = response.choices[0].message.content
+
+    st.sidebar.write("### Summary")
+    st.sidebar.write(summary)
+```
