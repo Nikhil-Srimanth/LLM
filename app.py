@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import datetime
 import wikipedia
@@ -131,4 +130,3 @@ if file:
 
     st.sidebar.write("### Summary")
     st.sidebar.write(summary)
-```
