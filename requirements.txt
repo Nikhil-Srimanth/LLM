@@ -1,0 +1,7 @@
+streamlit 
+speechrecognition 
+pyttsx3 
+nltk 
+spacy
+groq
+python-dotenv
