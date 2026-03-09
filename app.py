@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import speech_recognition as sr
 import pyttsx3
@@ -107,4 +106,3 @@ if st.button("Search Wikipedia"):
     if topic:
         result = wikipedia.summary(topic, sentences=2)
         st.write(result)
-```
