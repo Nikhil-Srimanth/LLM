@@ -1,7 +1,5 @@
-streamlit 
-groq 
-speechrecognition 
-pyttsx3 
-python-dotenv 
-wikipedia 
-pywhatkit
+streamlit
+groq
+python-dotenv
+wikipedia
+requests
