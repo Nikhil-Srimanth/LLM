@@ -5,20 +5,16 @@ import wikipedia
 from groq import Groq
 from dotenv import load_dotenv
 
-# Load local env
 # Load .env for local environment
 load_dotenv()
 
-# Get API key
 # Get API key (works locally + Streamlit Cloud)
 api_key = os.getenv("GROQ_API_KEY")
 
-# If running on Streamlit Cloud
 if not api_key:
     try:
         api_key = st.secrets["GROQ_API_KEY"]
     except:
-        st.error("❌ GROQ API key not found.")
         st.error("❌ GROQ API key not found. Add it to .env or Streamlit secrets.")
         st.stop()
 
@@ -31,33 +27,25 @@ st.set_page_config(page_title="Jarvis AI", page_icon="🤖")
 st.title("🤖 Jarvis AI Assistant")
 st.write("Your personal AI assistant powered by Groq")
 
-# Session memory
 # Chat memory
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Show chat history
 # Display previous messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
 
-# LLM function
 # Function to ask Groq
 def ask_llm(prompt):
 
-    if not prompt.strip():
-        return "Please ask something."
-
     try:
         response = client.chat.completions.create(
-            model="llama3-8b-8192",
             model="llama-3.1-8b-instant",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are Jarvis, an intelligent AI assistant."
                     "content": "You are Jarvis, a helpful AI assistant."
                 },
                 {
@@ -72,7 +60,6 @@ def ask_llm(prompt):
         return response.choices[0].message.content
 
     except Exception as e:
-        return f"⚠️ Error from AI service: {str(e)}"
         return f"⚠️ AI Error: {str(e)}"
 
 
@@ -90,14 +77,12 @@ def handle_commands(prompt):
         try:
             return wikipedia.summary(topic, sentences=2)
         except:
-            return "I couldn't find information on Wikipedia."
             return "Sorry, I couldn't find anything on Wikipedia."
 
     return None
 
 
 # Chat input
-prompt = st.chat_input("Ask Jarvis anything...")
 prompt = st.chat_input("Ask Jarvis something...")
 
 if prompt:
@@ -127,8 +112,6 @@ if prompt:
         st.write(response)
 
 
-# Sidebar
-st.sidebar.title("⚡ Tools")
 # Sidebar tools
 st.sidebar.title("⚡ Jarvis Tools")
 
@@ -140,7 +123,6 @@ if st.sidebar.button("Clear Chat"):
 # Wikipedia quick search
 st.sidebar.subheader("Wikipedia Search")
 
-topic = st.sidebar.text_input("Topic")
 topic = st.sidebar.text_input("Enter topic")
 
 if st.sidebar.button("Search") and topic:
